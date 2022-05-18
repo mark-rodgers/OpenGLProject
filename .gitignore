@@ -1,6 +1,5 @@
-./x64
-./x86
-./OpenGLProject/x64
-./OpenGLProject/x86
-
-.vs
+/x64
+/x86
+/OpenGLProject/x64
+/OpenGLProject/x86
+/.vs
