@@ -59,8 +59,8 @@ static unsigned int CompileShader(unsigned int type, const std::string& source) 
 		char* message = (char*)alloca(sizeof(char) * length);
 		GLCall(glGetShaderInfoLog(id, length, &length, message));
 
-		printf("Failed to compile %s shader!\n", (type == GL_VERTEX_SHADER ? "vertex" : "fragment"));
-		printf("%s", message);
+		std::cout << "Failed to compile " << (type == GL_VERTEX_SHADER ? "vertex" : "fragment") << " shader!" << std::endl;
+		std::cout << message << std::endl;
 		GLCall(glDeleteShader(id));
 		return 0;
 	}
@@ -100,38 +100,35 @@ int main(int argc, char* args[]) {
 		SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN
 	);
 	if (gWindow == nullptr) {
-		printf("Window could not be created\nError: %s\n", SDL_GetError());
-		getchar();
+		std::cout << "Window could not be created" << std::endl << "Error: " << SDL_GetError() << std::endl;
 		return -1;
 	}
 
 	// Create Context
 	gContext = SDL_GL_CreateContext(gWindow);
 	if (gContext == nullptr) {
-		printf("OpenGL context could not be created\nError: %s\n", SDL_GetError());
-		getchar();
+		std::cout << "OpenGL context could not be created" << std::endl << "Error: " << SDL_GetError() << std::endl;
 		return -1;
 	}
 	else {
-		printf("OpenGL %s\n", glGetString(GL_VERSION));
+		std::cout << "OpenGL " << glGetString(GL_VERSION) << std::endl;
 	}
 
 	// Initialize GLEW
 	GLenum glewError = glewInit();
 	if (glewError != GLEW_OK) {
-		printf("Failed to initialize GLEW\nError: %s\n", glewGetErrorString(glewError));
-		getchar();
+		std::cout << "Failed to initialize GLEW" << std::endl << "Error: " << glewGetErrorString(glewError) << std::endl;
 		return -1;
 	}
 	else {
-		printf("GLEW %s initialized\n\n", glewGetString(GLEW_VERSION));
+		std::cout << "GLEW " << glewGetString(GLEW_VERSION) << " initialized" << std::endl << std::endl;
 	}
 
 	// Enable adaptive v-sync if supported
 	if (SDL_GL_SetSwapInterval(-1) < 0) {
-		printf("Error enabling adaptive vsync\n%s\n", SDL_GetError());
+		std::cout << "Error enabling adaptive vsync" << std::endl << SDL_GetError() << std::endl;
 		if (SDL_GL_SetSwapInterval(1) < 0) {
-			printf("Error enabling vsync\n%s\n", SDL_GetError());
+			std::cout << "Error enabling vsync" << std::endl << SDL_GetError() << std::endl;
 		}
 	}
 
@@ -217,7 +214,7 @@ int main(int argc, char* args[]) {
 				PrintKeyInfo(&event.key);
 				break;
 			case SDL_QUIT:
-				printf("Program quit after %i ticks", event.quit.timestamp);
+				std::cout << "Program quit after " << event.quit.timestamp << " ticks" << std::endl;
 				quit = 1;
 				break;
 			}
@@ -231,11 +228,12 @@ int main(int argc, char* args[]) {
 }
 
 void PrintKeyInfo(SDL_KeyboardEvent* key) {
-	if (key->type == SDL_KEYDOWN)
+	if (key->type == SDL_KEYDOWN) {
 		printf("KEY DOWN - ");
-	else
+	}
+	else {
 		printf("KEY UP   - ");
+	}
 
-	printf("Scancode: 0x%02X", key->keysym.scancode);
-	printf(", Name: %s\n", SDL_GetKeyName(key->keysym.sym));
+	printf("Scancode: 0x%02X, Name: %s\n", key->keysym.scancode, SDL_GetKeyName(key->keysym.sym));
 }
