@@ -164,12 +164,27 @@ int main(int argc, char* args[]) {
 	unsigned int shader = CreateShader(vertexShaderSource, fragmentShaderSource);
 	GLCall(glUseProgram(shader));
 
+	float r = 1.0f;
+	float increment = 0.05f;
+	GLCall(int location = glGetUniformLocation(shader, "u_Color"));
+	ASSERT(location != -1);
+	GLCall(glUniform4f(location, r, 0.0f, 0.0f, 1.0f));
+
 	// Application Loop
 	SDL_Event event;
 	while (!quit) {
 		// GFX
 		GLCall(glClear(GL_COLOR_BUFFER_BIT));
 
+		if (r >= 1.0f) {
+			increment = -0.05f;
+		}
+		else if (r <= 0.0f) {
+			increment = 0.05f;
+		}
+		r += increment;
+
+		GLCall(glUniform4f(location, r, 0.0f, 0.0f, 1.0f));
 		GLCall(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr));
 		// Swap front and back buffer
 		SDL_GL_SwapWindow(gWindow);
