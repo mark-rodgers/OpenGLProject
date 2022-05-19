@@ -1,6 +1,9 @@
-#include <iostream>
 #include <SDL.h>
 #include <glew.h>
+
+#include <iostream>
+#include <fstream>
+#include <string>
 
 const int SCREEN_WIDTH = 1000;
 const int SCREEN_HEIGHT = 1000;
@@ -9,6 +12,18 @@ SDL_Window* gWindow = nullptr;
 SDL_GLContext gContext = nullptr;
 
 void PrintKeyInfo(SDL_KeyboardEvent* key);
+
+static std::string LoadShaderSource(const std::string& filepath) {
+	std::ifstream stream(filepath);
+
+	std::string line;
+	std::string shaderSource;
+	while (getline(stream, line)) {
+		shaderSource.append(line + "\n");
+	}
+
+	return shaderSource;
+}
 
 static unsigned int CompileShader(unsigned int type, const std::string& source) {
 	unsigned int id = glCreateShader(type);
@@ -33,10 +48,10 @@ static unsigned int CompileShader(unsigned int type, const std::string& source) 
 	return id;
 }
 
-static unsigned int CreateShader(const std::string& vertexShader, const std::string& fragmentShader) {
+static unsigned int CreateShader(const std::string& vertexShaderSource, const std::string& fragmentShaderSource) {
 	unsigned int program = glCreateProgram();
-	unsigned int vs = CompileShader(GL_VERTEX_SHADER, vertexShader);
-	unsigned int fs = CompileShader(GL_FRAGMENT_SHADER, fragmentShader);
+	unsigned int vs = CompileShader(GL_VERTEX_SHADER, vertexShaderSource);
+	unsigned int fs = CompileShader(GL_FRAGMENT_SHADER, fragmentShaderSource);
 
 	glAttachShader(program, vs);
 	glAttachShader(program, fs);
@@ -102,41 +117,33 @@ int main(int argc, char* args[]) {
 
 	glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
-	float positions[6] = {
-		-0.5f, -0.5f,
-		 0.0f,  0.5f,
-		 0.5f, -0.5f
+	float positions[] = {
+		-0.5f, -0.5f, // vertex index: 0
+		 0.5f, -0.5f, // vertex index: 1
+		 0.5f,  0.5f, // vertex index: 2
+		-0.5f,  0.5f  // vertex index: 3
+	};
+	unsigned int indices[] = {
+		0, 1, 2,
+		2, 3, 0
 	};
 
 	unsigned int buffer;
 	glGenBuffers(1, &buffer);
 	glBindBuffer(GL_ARRAY_BUFFER, buffer);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 6, positions, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 4 * 2, positions, GL_STATIC_DRAW);
 
 	glEnableVertexAttribArray(0);
 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0);
 
-	std::string vertexShader =
-		"#version 330 core\n"
-		"\n"
-		"layout(location = 0) in vec4 position;\n"
-		"\n"
-		"void main()\n"
-		"{\n"
-		"	gl_Position = position;\n"
-		"}\n";
+	unsigned int ibo;
+	glGenBuffers(1, &ibo);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * 6, indices, GL_STATIC_DRAW);
 
-	std::string fragmentShader =
-		"#version 330 core\n"
-		"\n"
-		"layout(location = 0) out vec4 color;\n"
-		"\n"
-		"void main()\n"
-		"{\n"
-		"	color = vec4(1.0, 0.0, 0.0, 1.0);\n"
-		"}\n";
-
-	unsigned int shader = CreateShader(vertexShader, fragmentShader);
+	std::string vertexShaderSource = LoadShaderSource("assets/shaders/FlatColor.shader.vert");
+	std::string fragmentShaderSource = LoadShaderSource("assets/shaders/FlatColor.shader.frag");
+	unsigned int shader = CreateShader(vertexShaderSource, fragmentShaderSource);
 	glUseProgram(shader);
 
 	// Application Loop
@@ -144,7 +151,7 @@ int main(int argc, char* args[]) {
 	while (!quit) {
 		// GFX
 		glClear(GL_COLOR_BUFFER_BIT);
-		glDrawArrays(GL_TRIANGLES, 0, 3);
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
 
 		// Swap front and back buffer
 		SDL_GL_SwapWindow(gWindow);
