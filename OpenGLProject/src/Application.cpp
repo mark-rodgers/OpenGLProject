@@ -68,7 +68,7 @@ static unsigned int CompileShader(unsigned int type, const std::string& source) 
 	return id;
 }
 
-static unsigned int CreateShader(const std::string& vertexShaderSource, const std::string& fragmentShaderSource) {
+static unsigned int CreateShaderProgram(const std::string& vertexShaderSource, const std::string& fragmentShaderSource) {
 	GLCall(unsigned int program = glCreateProgram());
 	unsigned int vs = CompileShader(GL_VERTEX_SHADER, vertexShaderSource);
 	unsigned int fs = CompileShader(GL_FRAGMENT_SHADER, fragmentShaderSource);
@@ -127,7 +127,7 @@ int main(int argc, char* args[]) {
 		printf("GLEW %s initialized\n\n", glewGetString(GLEW_VERSION));
 	}
 
-	// Enable V-Sync
+	// Enable adaptive v-sync if supported
 	if (SDL_GL_SetSwapInterval(-1) < 0) {
 		printf("Error enabling adaptive vsync\n%s\n", SDL_GetError());
 		if (SDL_GL_SetSwapInterval(1) < 0) {
@@ -135,57 +135,69 @@ int main(int argc, char* args[]) {
 		}
 	}
 
+	// Vertex positions
 	float positions[] = {
-		-0.5f, -0.5f, // vertex index: 0
-		 0.5f, -0.5f, // vertex index: 1
-		 0.5f,  0.5f, // vertex index: 2
-		-0.5f,  0.5f  // vertex index: 3
+		-0.5f, -0.5f, // vertex index 0
+		 0.5f, -0.5f, // vertex index 1
+		 0.5f,  0.5f, // vertex index 2
+		-0.5f,  0.5f  // vertex index 3
 	};
+
+	// Vertex indices
 	unsigned int indices[] = {
 		0, 1, 2,
 		2, 3, 0
 	};
 
+	// Vertex Buffer
 	unsigned int buffer;
 	GLCall(glGenBuffers(1, &buffer));
 	GLCall(glBindBuffer(GL_ARRAY_BUFFER, buffer));
 	GLCall(glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 4 * 2, positions, GL_STATIC_DRAW));
 
+	// Vertex Attributes
 	GLCall(glEnableVertexAttribArray(0));
 	GLCall(glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0));
 
+	// Index Buffer
 	unsigned int ibo;
 	GLCall(glGenBuffers(1, &ibo));
 	GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo));
 	GLCall(glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * 6, indices, GL_STATIC_DRAW));
 
+	// Load shaders from filesystem 
 	std::string vertexShaderSource = LoadShaderSource("assets/shaders/FlatColor.shader.vert");
 	std::string fragmentShaderSource = LoadShaderSource("assets/shaders/FlatColor.shader.frag");
-	unsigned int shader = CreateShader(vertexShaderSource, fragmentShaderSource);
-	GLCall(glUseProgram(shader));
 
-	float r = 1.0f;
-	float increment = 0.05f;
-	GLCall(int location = glGetUniformLocation(shader, "u_Color"));
+	// Creates a GLSL shader program; compiles, attaches, and links shaders to the program
+	// then executes the program on the currently bound VBO
+	unsigned int shaderProgram = CreateShaderProgram(vertexShaderSource, fragmentShaderSource);
+	GLCall(glUseProgram(shaderProgram));
+
+	// Locate shader uniform and pass variable to the shader program
+	float red = 1.0f;
+	GLCall(int location = glGetUniformLocation(shaderProgram, "u_Color"));
 	ASSERT(location != -1);
-	GLCall(glUniform4f(location, r, 0.0f, 0.0f, 1.0f));
+	GLCall(glUniform4f(location, red, 0.0f, 0.0f, 1.0f));
 
 	// Application Loop
+	float redIncrement = 0.05f;
 	SDL_Event event;
 	while (!quit) {
 		// GFX
 		GLCall(glClear(GL_COLOR_BUFFER_BIT));
 
-		if (r >= 1.0f) {
-			increment = -0.05f;
+		if (red >= 1.0f) {
+			redIncrement = -0.05f;
 		}
-		else if (r <= 0.0f) {
-			increment = 0.05f;
+		else if (red <= 0.0f) {
+			redIncrement = 0.05f;
 		}
-		r += increment;
+		red += redIncrement;
 
-		GLCall(glUniform4f(location, r, 0.0f, 0.0f, 1.0f));
+		GLCall(glUniform4f(location, red, 0.0f, 0.0f, 1.0f));
 		GLCall(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr));
+
 		// Swap front and back buffer
 		SDL_GL_SwapWindow(gWindow);
 
@@ -208,7 +220,7 @@ int main(int argc, char* args[]) {
 		}
 	}
 
-	GLCall(glDeleteProgram(shader));
+	GLCall(glDeleteProgram(shaderProgram));
 	SDL_DestroyWindow(gWindow);
 	SDL_Quit();
 	return 0;
