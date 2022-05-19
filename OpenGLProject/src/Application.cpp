@@ -149,6 +149,11 @@ int main(int argc, char* args[]) {
 		2, 3, 0
 	};
 
+	// Vertex Array Object
+	unsigned int vao;
+	GLCall(glGenVertexArrays(1, &vao));
+	GLCall(glBindVertexArray(vao));
+
 	// Vertex Buffer
 	unsigned int buffer;
 	GLCall(glGenBuffers(1, &buffer));
@@ -186,6 +191,7 @@ int main(int argc, char* args[]) {
 	while (!quit) {
 		// GFX
 		GLCall(glClear(GL_COLOR_BUFFER_BIT));
+		GLCall(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr));
 
 		if (red >= 1.0f) {
 			redIncrement = -0.05f;
@@ -194,9 +200,7 @@ int main(int argc, char* args[]) {
 			redIncrement = 0.05f;
 		}
 		red += redIncrement;
-
 		GLCall(glUniform4f(location, red, 0.0f, 0.0f, 1.0f));
-		GLCall(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr));
 
 		// Swap front and back buffer
 		SDL_GL_SwapWindow(gWindow);
