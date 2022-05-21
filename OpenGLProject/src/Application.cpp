@@ -1,12 +1,13 @@
-#include "Renderer.h";
-#include "VertexBuffer.h";
-#include "IndexBuffer.h"
-
 #include <SDL.h>
 #include <glew.h>
 #include <iostream>
 #include <fstream>
 #include <string>
+
+#include "Renderer.h"
+#include "VertexBuffer.h"
+#include "IndexBuffer.h"
+#include "VertexArray.h"
 
 const unsigned int SCREEN_WIDTH = 1000;
 const unsigned int SCREEN_HEIGHT = 1000;
@@ -130,16 +131,12 @@ int main(int argc, char* args[]) {
 			2, 3, 0
 		};
 
-		// Vertex Array Object
-		unsigned int vao;
-		GLCall(glGenVertexArrays(1, &vao));
-		GLCall(glBindVertexArray(vao));
-
-		VertexBuffer vb(positions, sizeof(float) * 2 * 4);
-
-		// Vertex Attributes
-		GLCall(glEnableVertexAttribArray(0));
-		GLCall(glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0));
+		VertexArray vao;
+		VertexBuffer vbo(positions, sizeof(float) * 2 * 4);
+		VertexBufferLayout layout;
+		layout.Push<float>(2);
+		vao.AddBuffer(vbo, layout);
+		vao.Bind();
 
 		IndexBuffer ibo(indices, 6);
 

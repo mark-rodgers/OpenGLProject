@@ -1,6 +1,6 @@
-#include "Renderer.h";
-
 #include <iostream>
+
+#include "Renderer.h"
 
 void GLClearError() {
 	while (glGetError());
