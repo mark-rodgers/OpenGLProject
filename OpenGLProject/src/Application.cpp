@@ -1,16 +1,12 @@
+#include "Renderer.h";
+#include "VertexBuffer.h";
+#include "IndexBuffer.h"
+
 #include <SDL.h>
 #include <glew.h>
-
 #include <iostream>
 #include <fstream>
 #include <string>
-
-// TODO: rewrite this assert. __debugbreak() is compiler intrinsic
-//       and should be rewritten in a non-platform specific way
-#define ASSERT(x) if (!(x)) __debugbreak();
-#define GLCall(x) GLClearError();\
-	x;\
-	ASSERT(GLLogCall(#x, __FILE__, __LINE__))
 
 const unsigned int SCREEN_WIDTH = 1000;
 const unsigned int SCREEN_HEIGHT = 1000;
@@ -19,19 +15,6 @@ SDL_Window* gWindow = nullptr;
 SDL_GLContext gContext = nullptr;
 
 void PrintKeyInfo(SDL_KeyboardEvent* key);
-
-static void GLClearError() {
-	while (glGetError());
-}
-
-static bool GLLogCall(const char* function, const char* file, int line) {
-	while (GLenum error = glGetError()) {
-		std::cout << "OpenGL Error (" << error << "): " << function <<
-			" " << file << ":" << line << std::endl;
-		return false;
-	}
-	return true;
-}
 
 static std::string LoadShaderSource(const std::string& filepath) {
 	std::ifstream stream(filepath);
@@ -132,96 +115,91 @@ int main(int argc, char* args[]) {
 		}
 	}
 
-	// Vertex positions
-	float positions[] = {
-		-0.5f, -0.5f, // vertex index 0
-		 0.5f, -0.5f, // vertex index 1
-		 0.5f,  0.5f, // vertex index 2
-		-0.5f,  0.5f  // vertex index 3
-	};
+	{
+		// Vertex positions
+		float positions[] = {
+			-0.5f, -0.5f,
+			 0.5f, -0.5f,
+			 0.5f,  0.5f,
+			-0.5f,  0.5f
+		};
 
-	// Vertex indices
-	unsigned int indices[] = {
-		0, 1, 2,
-		2, 3, 0
-	};
+		// Vertex indices
+		unsigned int indices[] = {
+			0, 1, 2,
+			2, 3, 0
+		};
 
-	// Vertex Array Object
-	unsigned int vao;
-	GLCall(glGenVertexArrays(1, &vao));
-	GLCall(glBindVertexArray(vao));
+		// Vertex Array Object
+		unsigned int vao;
+		GLCall(glGenVertexArrays(1, &vao));
+		GLCall(glBindVertexArray(vao));
 
-	// Vertex Buffer
-	unsigned int buffer;
-	GLCall(glGenBuffers(1, &buffer));
-	GLCall(glBindBuffer(GL_ARRAY_BUFFER, buffer));
-	GLCall(glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 4 * 2, positions, GL_STATIC_DRAW));
+		VertexBuffer vb(positions, sizeof(float) * 2 * 4);
 
-	// Vertex Attributes
-	GLCall(glEnableVertexAttribArray(0));
-	GLCall(glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0));
+		// Vertex Attributes
+		GLCall(glEnableVertexAttribArray(0));
+		GLCall(glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(float) * 2, 0));
 
-	// Index Buffer
-	unsigned int ibo;
-	GLCall(glGenBuffers(1, &ibo));
-	GLCall(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo));
-	GLCall(glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * 6, indices, GL_STATIC_DRAW));
+		IndexBuffer ibo(indices, 6);
 
-	// Load shaders from filesystem 
-	std::string vertexShaderSource = LoadShaderSource("assets/shaders/FlatColor.shader.vert");
-	std::string fragmentShaderSource = LoadShaderSource("assets/shaders/FlatColor.shader.frag");
+		// Load shaders from filesystem 
+		std::string vertexShaderSource = LoadShaderSource("assets/shaders/FlatColor.shader.vert");
+		std::string fragmentShaderSource = LoadShaderSource("assets/shaders/FlatColor.shader.frag");
 
-	// Creates a GLSL shader program; compiles, attaches, and links shaders to the program
-	// then executes the program on the currently bound VBO
-	unsigned int shaderProgram = CreateShaderProgram(vertexShaderSource, fragmentShaderSource);
-	GLCall(glUseProgram(shaderProgram));
+		// Creates a GLSL shader program; compiles, attaches, and links shaders to the program
+		// then executes the program on the currently bound VBO
+		unsigned int shaderProgram = CreateShaderProgram(vertexShaderSource, fragmentShaderSource);
+		GLCall(glUseProgram(shaderProgram));
 
-	// Locate shader uniform and pass variable to the shader program
-	float red = 1.0f;
-	GLCall(int location = glGetUniformLocation(shaderProgram, "u_Color"));
-	ASSERT(location != -1);
-	GLCall(glUniform4f(location, red, 0.0f, 0.0f, 1.0f));
-
-	// Application Loop
-	float redIncrement = 0.05f;
-	SDL_Event event;
-	while (!quit) {
-		// GFX
-		GLCall(glClear(GL_COLOR_BUFFER_BIT));
-		GLCall(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr));
-
-		if (red >= 1.0f) {
-			redIncrement = -0.05f;
-		}
-		else if (red <= 0.0f) {
-			redIncrement = 0.05f;
-		}
-		red += redIncrement;
+		// Locate shader uniform and pass variable to the shader program
+		float red = 1.0f;
+		GLCall(int location = glGetUniformLocation(shaderProgram, "u_Color"));
+		ASSERT(location != -1);
 		GLCall(glUniform4f(location, red, 0.0f, 0.0f, 1.0f));
 
-		// Swap front and back buffer
-		SDL_GL_SwapWindow(gWindow);
+		// Application Loop
+		float redIncrement = 0.05f;
+		SDL_Event event;
+		while (!quit) {
+			// GFX
+			GLCall(glClear(GL_COLOR_BUFFER_BIT));
+			GLCall(glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr));
 
-		// INPUT
-		while (SDL_PollEvent(&event)) {
-			switch (event.type) {
-			case SDL_KEYDOWN:
-				PrintKeyInfo(&event.key);
-				if (event.key.keysym.sym == SDLK_ESCAPE)
+			if (red >= 1.0f) {
+				redIncrement = -0.05f;
+			}
+			else if (red <= 0.0f) {
+				redIncrement = 0.05f;
+			}
+			red += redIncrement;
+			GLCall(glUniform4f(location, red, 0.0f, 0.0f, 1.0f));
+
+			// Swap front and back buffer
+			SDL_GL_SwapWindow(gWindow);
+
+			// INPUT
+			while (SDL_PollEvent(&event)) {
+				switch (event.type) {
+				case SDL_KEYDOWN:
+					PrintKeyInfo(&event.key);
+					if (event.key.keysym.sym == SDLK_ESCAPE)
+						quit = 1;
+					break;
+				case SDL_KEYUP:
+					PrintKeyInfo(&event.key);
+					break;
+				case SDL_QUIT:
+					std::cout << "Program quit after " << event.quit.timestamp << " ticks" << std::endl;
 					quit = 1;
-				break;
-			case SDL_KEYUP:
-				PrintKeyInfo(&event.key);
-				break;
-			case SDL_QUIT:
-				std::cout << "Program quit after " << event.quit.timestamp << " ticks" << std::endl;
-				quit = 1;
-				break;
+					break;
+				}
 			}
 		}
+
+		GLCall(glDeleteProgram(shaderProgram));
 	}
 
-	GLCall(glDeleteProgram(shaderProgram));
 	SDL_DestroyWindow(gWindow);
 	SDL_Quit();
 	return 0;
